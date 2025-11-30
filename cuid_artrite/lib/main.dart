@@ -1,6 +1,6 @@
-// em lib/main.dart
 import 'package:flutter/material.dart';
-import 'features/home/presentation/pages/home_page.dart'; // Importe o arquivo
+import 'features/home/presentation/pages/home_page.dart';
+import 'features/auth/presentation/pages/login_page.dart'; // Import Login
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +18,13 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         useMaterial3: true,
       ),
-      home: const HomePage(), // Chame a HomePage aqui mudanca
+      // 1. Change home to LoginPage
+      home: const LoginPage(), 
+      
+      // 2. Add this so the "Entrar" button works
+      routes: {
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }

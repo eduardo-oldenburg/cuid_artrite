@@ -10,6 +10,10 @@ class AppColors {
   static const Color background = Color(0xFFF5F7FA); // O fundo cinza bem clarinho
   static const Color white = Color(0xFFFFFFFF);
   
+  static const Color textGrey = Color(0xFF9CA3AF);       // Grey text (secondary)
+  static const Color inputBg = Color(0xFFF5F6FA);        // Input field background
+  static const Color border = Color(0xFFE0E0E0);    
+ 
   // --- Textos ---
   static const Color textDark = Color(0xFF37474F); // Cinza escuro para títulos
   static const Color textLight = Colors.white; // Texto em cima de fundos escuros
