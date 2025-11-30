@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "988812199212",
+    "firebase_url": "https://cuid-artrite-default-rtdb.firebaseio.com",
+    "project_id": "cuid-artrite",
+    "storage_bucket": "cuid-artrite.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:988812199212:android:c4e2f7fe185280932bd889",
+        "android_client_info": {
+          "package_name": "com.example.cuid_artrite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDssZjfJooxQdkEJjF8kkpYJzdBiBtG61I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
