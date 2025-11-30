@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart'; // Make sure this path is correct
+import '../../../../core/theme/app_colors.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -159,25 +160,31 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 40),
 
               // --- 7. Footer ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Não tem uma conta?",
-                    style: TextStyle(color: AppColors.textGrey),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "Criar conta",
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Não tem uma conta?",
+                  style: TextStyle(color: AppColors.textGrey),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // --- ADD THIS NAVIGATION ---
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignUpPage()),
+                    );
+                  },
+                  child: const Text(
+                    "Criar conta",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
             ],
           ),
         ),
