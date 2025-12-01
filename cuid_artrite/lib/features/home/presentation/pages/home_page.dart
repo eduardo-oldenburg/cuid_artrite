@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../../../../core/theme/app_colors.dart';
 import '../../../education/presentation/pages/education_page.dart';
 import '../../../pain_tracker/presentation/pages/pain_scale_page.dart'; 
@@ -8,16 +9,73 @@ import '../../../practices/presentation/pages/practices_page.dart';
 import '../../../practices/presentation/pages/breathAndRelax/breathing_techniques_page.dart'; 
 import 'package:shared_preferences/shared_preferences.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int? _todaysPainLevel; // Stores the pain level (null if not registered)
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodaysPain();
+  }
+
+  // --- 1. Fetch Today's Pain Logic ---
+  Future<void> _loadTodaysPain() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? userId = prefs.getString('userId');
+
+      if (userId == null) return;
+
+      // Calculate start of today (Midnight)
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+
+      // Query Firestore: Get latest record for today
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('pain_records')
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+          .orderBy('timestamp', descending: true) // Get the most recent one
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data() as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            _todaysPainLevel = data['painLevel'];
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _todaysPainLevel = null; // No record found for today
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching pain: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   // --- 2. Logout Logic ---
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Clears the session data
+    await prefs.clear();
 
     if (context.mounted) {
-      // Navigate back to Login and remove all previous routes
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
@@ -108,53 +166,50 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-          Row(
-            children: [
-              // --- 1. Notifications Button (Your new code) ---
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationsPage(),
+              Row(
+                children: [
+                  // Notifications Button
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationsPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.notifications, color: AppColors.white),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.2), // Glass effect
-                    shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.notifications, color: AppColors.white),
-                ),
-              ),
 
-              const SizedBox(width: 12), // Space between buttons
+                  const SizedBox(width: 12), 
 
-              // --- 2. Logout Button (Matching Style) ---
-              GestureDetector(
-                onTap: () => _logout(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    // Using the same style as notifications for consistency
-                    color: AppColors.white.withOpacity(0.2), 
-                    // If you prefer it red to warn the user, uncomment below:
-                    // color: Colors.red.withOpacity(0.7), 
-                    shape: BoxShape.circle,
+                  // Logout Button
+                  GestureDetector(
+                    onTap: () => _logout(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withOpacity(0.2), 
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.logout, color: AppColors.white),
+                    ),
                   ),
-                  child: const Icon(Icons.logout, color: AppColors.white),
-                ),
-              ),
-            ],
-          )
+                ],
+              )
             ],
           ),
           
           const SizedBox(height: 30),
 
-          // card de Status
+          // --- Status Card (Updated) ---
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -166,18 +221,20 @@ class HomePage extends StatelessWidget {
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       "Como está hoje?",
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      "Nível de Dor: 3",
-                      style: TextStyle(
+                      _todaysPainLevel != null 
+                          ? "Nível de Dor: $_todaysPainLevel" 
+                          : "Não registrado", // Logic to show text
+                      style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -192,15 +249,19 @@ class HomePage extends StatelessWidget {
                     color: AppColors.white.withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
-                    child: Text(
-                      "3",
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: Center(
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      : Text(
+                          _todaysPainLevel != null 
+                              ? "$_todaysPainLevel" 
+                              : "--", // Logic to show number or dashes
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                   ),
                 ),
               ],
@@ -216,7 +277,6 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          // linha 1
           Row(
             children: [
               Expanded(
@@ -231,7 +291,10 @@ class HomePage extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => const PainScalePage(),
                       ),
-                    );
+                    ).then((_) {
+                      // --- REFRESH HOME AFTER RETURNING ---
+                      _loadTodaysPain(); 
+                    });
                   },
                 ),
               ),
@@ -255,7 +318,6 @@ class HomePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // linha 2
           Row(
             children: [
               Expanded(
@@ -294,7 +356,6 @@ class HomePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Centralizado
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
