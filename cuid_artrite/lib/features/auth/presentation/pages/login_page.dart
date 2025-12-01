@@ -127,38 +127,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
 
               const SizedBox(height: 32),
-
-              // --- 5. Social Divider ---
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: AppColors.border)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: const Text(
-                      "ou continue com",
-                      style: TextStyle(color: AppColors.textGrey, fontSize: 14),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: AppColors.border)),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // --- 6. Social Buttons ---
-              _buildSocialButton(
-                icon: Icons.g_mobiledata, 
-                label: "Continuar com Google",
-                iconColor: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              _buildSocialButton(
-                icon: Icons.apple,
-                label: "Continuar com Apple",
-                iconColor: Colors.black,
-              ),
-
-              const SizedBox(height: 40),
-
               // --- 7. Footer ---
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -231,33 +199,6 @@ class _LoginPageState extends State<LoginPage> {
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton({required IconData icon, required String label, required Color iconColor}) {
-    return OutlinedButton(
-      onPressed: () {},
-      style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: const BorderSide(color: AppColors.border),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: Colors.white,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-        ],
       ),
     );
   }
