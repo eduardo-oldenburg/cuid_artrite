@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
-// IMPORTANTE: Importe o arquivo de cores que acabamos de criar
+import 'package:shared_preferences/shared_preferences.dart'; // 1. Import this
 import '../../../../core/theme/app_colors.dart'; 
 import '../../../education/presentation/pages/education_page.dart'; 
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  // --- 2. Logout Logic ---
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clears the session data
+
+    if (context.mounted) {
+      // Navigate back to Login and remove all previous routes
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Usando a cor centralizada
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,7 +38,7 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark, // Usando a cor centralizada
+                  color: AppColors.textDark,
                 ),
               ),
             ),
@@ -48,7 +59,7 @@ class HomePage extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppColors.primary, // Usando a cor centralizada
+        color: AppColors.primary,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -61,6 +72,7 @@ class HomePage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Logo + Text
               Row(
                 children: [
                   Container(
@@ -94,13 +106,34 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.notifications, color: AppColors.white),
+              
+              // Actions (Notification + Logout)
+              Row(
+                children: [
+                  // Notification Icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.notifications, color: AppColors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // --- 3. Logout Button ---
+                  InkWell(
+                    onTap: () => _logout(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.8), // Red to indicate exit
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.logout, color: AppColors.white, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -176,8 +209,8 @@ class HomePage extends StatelessWidget {
                 child: _MenuCard(
                   title: "Registrar Dor",
                   icon: Icons.priority_high,
-                  color: AppColors.cardRedBg,       // Usando AppColors
-                  iconColor: AppColors.cardRedIcon, // Usando AppColors
+                  color: AppColors.cardRedBg,
+                  iconColor: AppColors.cardRedIcon,
                   onTap: () {},
                 ),
               ),
@@ -231,7 +264,6 @@ class HomePage extends StatelessWidget {
                   color: AppColors.cardOrangeBg,
                   iconColor: AppColors.cardOrangeIcon,
                   onTap: () {
-                    // Adicione esta navegação
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const EducationPage()),
@@ -247,8 +279,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// O widget _MenuCard continua igual ao anterior, 
-// pois ele apenas recebe as cores que passamos acima.
 class _MenuCard extends StatelessWidget {
   final String title;
   final IconData icon;
