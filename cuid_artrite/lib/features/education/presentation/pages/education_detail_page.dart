@@ -11,9 +11,8 @@ class EducationDetailPage extends StatelessWidget {
     required this.item,
   });
 
-  // Função auxiliar para pegar o ID do vídeo do Youtube
+  // Função para extrair ID do video pela urll
   String? _getYoutubeThumbnail(String url) {
-    // Tenta extrair o ID do vídeo da URL
     try {
       final uri = Uri.parse(url);
       if (uri.host.contains('youtube.com')) {
@@ -51,7 +50,7 @@ class EducationDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- CABEÇALHO ---
+            // cabeçalho
             Center(
               child: Container(
                 width: 80,
@@ -93,7 +92,7 @@ class EducationDetailPage extends StatelessWidget {
             const Divider(height: 1),
             const SizedBox(height: 32),
 
-            // --- CONTEÚDO DINÂMICO ---
+            // conteudo dinamico
             ...item.content.map((section) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24.0),
@@ -154,13 +153,13 @@ class EducationDetailPage extends StatelessWidget {
                   ),
                 ],
               ),
-              // Lógica de Fallback: Tenta Asset -> Se falhar, tenta Network -> Se falhar, mostra erro
+              // tenta exibir imagem se falhar mostra erro
               child: Image.asset(
                 section.data,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  // Se não achar no asset (pasta), tenta carregar como URL da internet
+                  // caso nao ache na pasta tentar carregar como imagem web
                   return Image.network(
                     section.data,
                     width: double.infinity,
@@ -218,7 +217,7 @@ class EducationDetailPage extends StatelessWidget {
                 ? DecorationImage(
                     image: NetworkImage(thumbnailUrl),
                     fit: BoxFit.cover,
-                    opacity: 0.7, // Escurece um pouco para o ícone de play aparecer melhor
+                    opacity: 0.7, 
                   )
                 : null,
             ),

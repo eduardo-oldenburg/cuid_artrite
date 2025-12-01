@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'education_detail_page.dart';
 
-// --- ENUMS E CLASSES DE MODELO (Ficam no topo ou num arquivo separado) ---
-
 enum EducationSectionType { text, image, video, subtitle }
 
 class EducationSection {
   final EducationSectionType type;
-  final String data; // Texto, Caminho da Imagem ou URL do Vídeo
-  final String? caption; // Legenda opcional para imagem
+  final String data;     // texto, Caminho da Imagem ou URL do Vídeo
+  final String? caption; // legenda opcional para imagem
 
   EducationSection({required this.type, required this.data, this.caption});
 }
@@ -22,7 +20,6 @@ class EducationItem {
   final String category;
   final Color color;
   final Color bgLight;
-  // MUDANÇA: Content agora é uma lista de seções!
   final List<EducationSection> content;
 
   EducationItem({
@@ -36,8 +33,6 @@ class EducationItem {
     required this.content,
   });
 }
-
-// --- TELA PRINCIPAL ---
 
 class EducationPage extends StatefulWidget {
   const EducationPage({super.key});
@@ -60,7 +55,6 @@ class _EducationPageState extends State<EducationPage> {
     "Adaptações"
   ];
 
-  // --- DADOS MOCKADOS COM MULTIMÍDIA ---
   final List<EducationItem> _allItems = [
     EducationItem(
       title: "Entendendo sua Condição",
@@ -143,53 +137,199 @@ class _EducationPageState extends State<EducationPage> {
       ],
     ),
 
-    
     EducationItem(
       title: "Comendo para Desinflamar",
-      description: "Alimentos que ajudam a combater a dor.",
-      time: "8 min",
+      description: "Aprenda como a alimentação pode ajudar no controle da dor e na redução da inflamação.",
+      time: "12 min",
       icon: Icons.restaurant,
       category: "Alimentação",
       color: Colors.purple,
-      bgLight: Colors.purple.shade50,
+      bgLight: Colors.purpleAccent,
       content: [
         EducationSection(
           type: EducationSectionType.text,
-          data: "Alguns alimentos aumentam a inflamação no corpo, enquanto outros agem como bombeiros, apagando o fogo.",
+          data:
+              "A alimentação pode ser uma grande aliada no combate à dor da artrite. "
+              "Alguns alimentos aumentam a inflamação no corpo, enquanto outros agem como verdadeiros ‘bombeiros’, reduzindo o processo inflamatório.",
         ),
+
         EducationSection(
           type: EducationSectionType.subtitle,
-          data: "Os Heróis (Coma Mais)",
-        ),
-        EducationSection(
-          type: EducationSectionType.image,
-          data: "assets/images/alimentos_anti_inflamatorios.png",
-          caption: "Peixes, Cúrcuma e Frutas Vermelhas",
+          data: "Como a alimentação reduz a inflamação?",
         ),
         EducationSection(
           type: EducationSectionType.text,
-          data: "🐟 Ômega-3: Presente em peixes (sardinha, atum).\n🍊 Vitamina C: Essencial para formar colágeno.\n🫚 Cúrcuma: Potente anti-inflamatório natural.",
+          data:
+              "Nosso corpo produz inflamação para nos proteger, mas na artrite esse processo não desliga. "
+              "Quando escolhemos alimentos corretos, diminuímos substâncias pró-inflamatórias e fortalecemos a saúde das articulações.",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "🥦 Os Heróis (Coma Mais!)",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/alimentos_anti_inflamatorios.png",
+          caption: "Peixes ricos em ômega-3, cúrcuma, frutas vermelhas e azeite de oliva",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "Inclua no dia a dia:\n\n"
+              "• 🐟 **Peixes ricos em ômega-3**: sardinha, salmão, anchova\n"
+              "• 🍇 **Frutas vermelhas**: morango, amora, mirtilo\n"
+              "• 🫒 **Azeite de oliva extra virgem**\n"
+              "• 🥬 **Verduras verde-escuras**: espinafre, couve\n"
+              "• 🫘 **Castanhas e sementes**: nozes, chia, linhaça\n"
+              "• 🫚 **Cúrcuma e gengibre** como temperos\n"
+              "• 🍅 **Tomate** – rico em licopeno\n"
+              "• 🍵 **Chá-verde** – antioxidante poderoso\n",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "🔥 Os Vilões (Evite ao Máximo)",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/alimentos_inflamatorios.png",
+          caption: "Refrigerantes, frituras e embutidos são grandes inimigos",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "Esses alimentos aumentam a inflamação e pioram a dor:\n\n"
+              "🚫 Açúcar em excesso (doces, refrigerantes)\n"
+              "🚫 Frituras e fast-food\n"
+              "🚫 Carnes processadas (salsicha, bacon, presunto)\n"
+              "🚫 Farinhas brancas (pão branco, massas comuns)\n"
+              "🚫 Margarina e gordura trans\n"
+              "🚫 Consumo excessivo de álcool",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "💧 Hidratação Importa!",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "A água ajuda a manter a cartilagem nutrida e reduzir toxinas inflamatórias. "
+              "Tente beber de 6 a 8 copos por dia.",
+        ),
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "⚖️ Dica Final",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "Não existe alimento milagroso — é o **conjunto do que você come todos os dias** que fará diferença "
+              "no controle da dor e na sua qualidade de vida.\n\n"
+              "Pequenas escolhas → Grandes resultados! 💪",
         ),
       ],
     ),
     
-    // Adicionei um exemplo genérico para os outros itens não quebrarem
-    // Você deve preencher o resto seguindo esse padrão
     EducationItem(
       title: "Reconhecendo os Sinais",
-      description: "Aprenda a diferenciar a dor.",
-      time: "8 min",
+      description: "Identifique sintomas da artrite e saiba quando buscar ajuda.",
+      time: "10 min",
       icon: Icons.warning_amber_rounded,
       category: "Sinais",
       color: Colors.orange,
-      bgLight: Colors.orange.shade50,
+      bgLight: Colors.orangeAccent,
       content: [
         EducationSection(
-            type: EducationSectionType.text, 
-            data: "Conteúdo sobre sinais de alerta...")
+          type: EducationSectionType.text,
+          data:
+              "Muitas pessoas convivem com dor nas articulações e acham que é normal, "
+              "resultado do trabalho, idade ou esforço físico. Mas alguns sinais "
+              "podem indicar **artrite** e merecem atenção especial.",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "🟧 Quando a dor vira sinal de alerta?",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/sinais_inchaco_dor.png",
+          caption: "Inchaço, calor e rigidez são sinais comuns de inflamação",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "Observe se você sente:\n\n"
+              "• 🔥 **Dor persistente** que dura por semanas\n"
+              "• 🦵 **Inchaço nas articulações**\n"
+              "• ♨️ **Calor e vermelhidão** no local dolorido\n"
+              "• 🚫 **Dificuldade para mexer** quando acorda ou fica parado\n"
+              "• 😣 **Fraqueza e cansaço constante**\n\n"
+              "Se você respondeu sim a alguns desses sinais, é importante acompanhar.",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "⏰ A famosa “rigidez matinal”",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "A artrite costuma travar as articulações ao acordar. "
+              "Se a rigidez durar **mais de 30 minutos**, pode ser um dos principais indicadores "
+              "de doença inflamatória.",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "👣 Sinais em diferentes partes do corpo",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/sinais_maos_pes.png",
+          caption: "Mãos e pés são regiões muito afetadas",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "A artrite pode afetar qualquer articulação, mas é comum começar em:\n\n"
+              "• 🤲 **Dedos das mãos** – articulações ficam doloridas e grossas\n"
+              "• 🦶 **Pés** – dor ao pisar, principalmente pela manhã\n"
+              "• 🦵 **Joelhos** – dificuldade para subir escadas\n"
+              "• 🦴 **Punhos e tornozelos**\n",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "⚠️ Sintomas que exigem consulta médica",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "Procure atendimento se apresentar:\n\n"
+              "❗ Dor e inchaço em **mais de uma articulação**\n"
+              "❗ Sintomas durando **mais de 6 semanas**\n"
+              "❗ Febre, perda de peso ou cansaço extremo\n"
+              "❗ Dificuldade para realizar tarefas simples do dia a dia",
+        ),
+
+        EducationSection(
+          type: EducationSectionType.subtitle,
+          data: "🎯 Quanto antes descobrir, melhor!",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "O diagnóstico precoce evita danos permanentes nas articulações e melhora "
+              "muito a qualidade de vida. Escute seu corpo e busque ajuda sempre que sentir "
+              "que algo não está certo. Você não precisa enfrentar isso sozinho(a). 💛",
+        ),
       ],
     ),
-     EducationItem(
+
+    EducationItem(
       title: "Tratamentos que Funcionam",
       description: "A pirâmide do tratamento.",
       time: "12 min",
@@ -199,10 +339,44 @@ class _EducationPageState extends State<EducationPage> {
       bgLight: Colors.green.shade50,
       content: [
         EducationSection(
-            type: EducationSectionType.text, 
-            data: "Conteúdo sobre tratamentos...")
+          type: EducationSectionType.text,
+          data:
+              "O tratamento da artrite segue uma abordagem estruturada para controlar a dor, proteger as articulações e impedir a progressão da doença. Quanto mais cedo o tratamento é iniciado, melhores são os resultados."
+              "\n\nA pirâmide do tratamento se divide em três pontos principais:"
+              "\n1️⃣ Controle da dor e inflamação"
+              "\n2️⃣ Proteção e fortalecimento das articulações"
+              "\n3️⃣ Medicamentos modificadores da doença"
+              "\n\nO tratamento é sempre individualizado e deve ser acompanhado por reumatologista.",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🟩 **Primeira linha do tratamento**"
+              "\n• Analgésicos e anti-inflamatórios"
+              "\n• Corticoides em curto prazo"
+              "\n\nEles aliviam os sintomas, mas não impedem danos futuros.",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🟧 **DMARDs – Medicamentos modificadores da doença**"
+              "\n• Metotrexato, Leflunomida, Sulfassalazina"
+              "\n• Agem na causa da inflamação"
+              "\n• Evitam deformidades"
+              "\n\nSão o principal tratamento das artrites inflamatórias crônicas.",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🟥 **Terapias biológicas e agentes-alvo**"
+              "\nIndicados quando os DMARDs não são suficientes."
+              "\nAgem bloqueando moléculas específicas que geram inflamação."
+              "\nEx.: anti-TNF, anti-IL-6, inibidores de JAK."
+              "\n\nTransformaram a qualidade de vida de muitos pacientes.",
+        ),
       ],
     ),
+
     EducationItem(
       title: "Adaptações e Casa Segura",
       description: "Truques para o dia a dia.",
@@ -211,13 +385,52 @@ class _EducationPageState extends State<EducationPage> {
       category: "Adaptações",
       color: Colors.indigo,
       bgLight: Colors.indigo.shade50,
-       content: [
+      content: [
         EducationSection(
-            type: EducationSectionType.text, 
-            data: "Conteúdo sobre adaptações...")
+          type: EducationSectionType.text,
+          data:
+              "A dor e rigidez podem dificultar tarefas simples como abrir uma porta ou tomar banho. Pequenas adaptações reduzem o risco de quedas e ajudam a manter autonomia."
+              "\n\nEssas mudanças não precisam ser caras — muitas podem ser improvisadas!",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🏡 **Banheiro mais seguro:**"
+              "\n• Barras de apoio próximas ao vaso e no box"
+              "\n• Piso antiderrapante"
+              "\n• Banquinho para banho"
+              "\n\nEstatística: o banheiro é o cômodo com mais quedas entre pessoas com limitações de mobilidade.",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/banheiro_adaptado.png",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🔑 **Cozinha acessível:**"
+              "\n• Abridores de frascos ergonômicos"
+              "\n• Utensílios com cabos grossos"
+              "\n• Armários baixos de fácil acesso"
+              "\n\nObjetivo: reduzir movimentos que forçam as mãos e punhos.",
+        ),
+        EducationSection(
+          type: EducationSectionType.image,
+          data: "assets/images/education/cozinha_adapatada.png", 
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🛋️ **Mobilidade dentro de casa:**"
+              "\n• Tapetes antiderrapantes"
+              "\n• Cadeiras com apoio para braços"
+              "\n• Boa iluminação em todos os cômodos"
+              "\n\nCada ajuste reduz uma dor e aumenta a liberdade!",
+        ),
       ],
     ),
-     EducationItem(
+
+    EducationItem(
       title: "Mente Sã, Corpo Sem Dor",
       description: "Psicologia da dor.",
       time: "10 min",
@@ -225,10 +438,32 @@ class _EducationPageState extends State<EducationPage> {
       category: "Mente",
       color: Colors.teal,
       bgLight: Colors.teal.shade50,
-       content: [
+      content: [
         EducationSection(
-            type: EducationSectionType.text, 
-            data: "Conteúdo sobre saúde mental...")
+          type: EducationSectionType.text,
+          data:
+              "A dor crônica afeta o corpo — mas também as emoções, o sono e a socialização. Quando estamos tristes, estressados ou ansiosos, o cérebro percebe a dor de forma ainda mais intensa."
+              "\n\nPor isso, cuidar da mente também é tratar a artrite!",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "🧠 **Terapias psicológicas ajudam a:**"
+              "\n• Reduzir medo da dor e da limitação"
+              "\n• Melhorar depressão e ansiedade"
+              "\n• Recuperar autoestima e independência"
+              "\n\nTerapia cognitivo-comportamental é especialmente recomendada.",
+        ),
+        EducationSection(
+          type: EducationSectionType.text,
+          data:
+              "💤 **Sono e dor andam juntos**"
+              "\nMaus hábitos de sono aumentam a inflamação e a fadiga."
+              "\n\n📌 Dicas práticas:"
+              "\n• Evite telas antes de dormir"
+              "\n• Ambientes escuros e silenciosos"
+              "\n• Rotina de relaxamento antes de deitar",
+        ),
       ],
     ),
   ];

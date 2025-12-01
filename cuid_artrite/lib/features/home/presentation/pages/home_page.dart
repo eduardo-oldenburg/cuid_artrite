@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-// IMPORTANTE: Importe o arquivo de cores que acabamos de criar
-import '../../../../core/theme/app_colors.dart'; 
-import '../../../education/presentation/pages/education_page.dart'; 
+import '../../../../core/theme/app_colors.dart';
+import '../../../education/presentation/pages/education_page.dart';
+import '../../../pain_tracker/presentation/pages/pain_scale_page.dart'; 
+import '../../../diary/presentation/pages/diary_page.dart'; 
+import '../../../reports/presentation/pages/reports_page.dart'; 
+import '../../../practices/presentation/pages/practices_page.dart'; 
+import '../../../practices/presentation/pages/breathAndRelax/breathing_techniques_page.dart'; 
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -9,17 +13,15 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Usando a cor centralizada
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             _buildHeader(context),
 
             const SizedBox(height: 24),
 
-            // Título
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0),
               child: Text(
@@ -27,14 +29,13 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark, // Usando a cor centralizada
+                  color: AppColors.textDark,
                 ),
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Grid de Botões
             _buildMenuGrid(context),
 
             const SizedBox(height: 30),
@@ -48,7 +49,7 @@ class HomePage extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppColors.primary, // Usando a cor centralizada
+        color: AppColors.primary,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -94,20 +95,30 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsPage(),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.notifications, color: AppColors.white),
                 ),
-                child: const Icon(Icons.notifications, color: AppColors.white),
               ),
             ],
           ),
           
           const SizedBox(height: 30),
 
-          // Card de Status
+          // card de Status
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -169,16 +180,23 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          // Linha 1
+          // linha 1
           Row(
             children: [
               Expanded(
                 child: _MenuCard(
                   title: "Registrar Dor",
                   icon: Icons.priority_high,
-                  color: AppColors.cardRedBg,       // Usando AppColors
-                  iconColor: AppColors.cardRedIcon, // Usando AppColors
-                  onTap: () {},
+                  color: AppColors.cardRedBg,
+                  iconColor: AppColors.cardRedIcon,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PainScalePage(),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -188,13 +206,20 @@ class HomePage extends StatelessWidget {
                   icon: Icons.spa,
                   color: AppColors.cardBlueBg,
                   iconColor: AppColors.cardBlueIcon,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReliefTechniquesPage(),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          // Linha 2
+          // linha 2
           Row(
             children: [
               Expanded(
@@ -203,7 +228,14 @@ class HomePage extends StatelessWidget {
                   icon: Icons.book,
                   color: AppColors.cardGreenBg,
                   iconColor: AppColors.cardGreenIcon,
-                  onTap: () {},
+                  onTap: () {
+                      Navigator.push(
+                       context,
+                       MaterialPageRoute(
+                         builder: (context) => const DiaryPage(),
+                       ),
+                     );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -213,7 +245,14 @@ class HomePage extends StatelessWidget {
                   icon: Icons.show_chart,
                   color: AppColors.cardPurpleBg,
                   iconColor: AppColors.cardPurpleIcon,
-                  onTap: () {},
+                  onTap: () {
+                      Navigator.push(
+                       context,
+                       MaterialPageRoute(
+                         builder: (context) => const ReportsPage(),
+                       ),
+                     );
+                  },
                 ),
               ),
             ],
@@ -231,10 +270,11 @@ class HomePage extends StatelessWidget {
                   color: AppColors.cardOrangeBg,
                   iconColor: AppColors.cardOrangeIcon,
                   onTap: () {
-                    // Adicione esta navegação
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const EducationPage()),
+                      MaterialPageRoute(
+                        builder: (context) => const EducationPage(),
+                      ),
                     );
                   },
                 ),
@@ -247,8 +287,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// O widget _MenuCard continua igual ao anterior, 
-// pois ele apenas recebe as cores que passamos acima.
 class _MenuCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -300,6 +338,46 @@ class _MenuCard extends StatelessWidget {
                 color: iconColor.withOpacity(0.8),
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NotificationsPage extends StatelessWidget {
+  const NotificationsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background, 
+      appBar: AppBar(
+        title: const Text(
+          "Notificações",
+          style: TextStyle(color: AppColors.textDark),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.notifications_off_outlined,
+              size: 64,
+              color: Colors.grey.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Nenhuma notificação nova",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.withOpacity(0.8),
               ),
             ),
           ],
