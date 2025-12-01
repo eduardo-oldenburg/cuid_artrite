@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -11,8 +12,185 @@ class ReportsPage extends StatefulWidget {
 }
 
 class _ReportsPageState extends State<ReportsPage> {
-  int _selectedPeriodIndex = 0; // 0: 7 dias, 1: 30 dias, 2: 3 meses
+  // State Variables
+  int _selectedPeriodIndex = 0; // 0: 7 days, 1: 30 days, 2: 3 months
+  bool _isLoading = true;
+  String? _userId;
 
+  // --- Pain Statistics ---
+  List<double> _chartData = [];
+  List<String> _chartLabels = [];
+  double _currentAverage = 0.0;
+  double _previousAverage = 0.0;
+  int _daysRecorded = 0;
+  int _totalPainRecords = 0;
+
+  // --- Practice Statistics ---
+  int _totalPractices = 0;
+  Map<String, int> _practiceCounts = {}; // e.g. {"Meditação": 5, "Yoga": 2}
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  // 1. Load User ID
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+    _userId = prefs.getString('userId');
+
+    if (_userId == null) {
+      // Handle case where user is not logged in
+      setState(() => _isLoading = false);
+      return;
+    }
+    await _fetchFirestoreData();
+  }
+
+  // 2. Fetch Data from Firestore
+  Future<void> _fetchFirestoreData() async {
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime previousPeriodStartDate;
+
+    // Define Date Ranges
+    if (_selectedPeriodIndex == 0) {
+      // 7 Days
+      startDate = now.subtract(const Duration(days: 7));
+      previousPeriodStartDate = now.subtract(const Duration(days: 14));
+    } else if (_selectedPeriodIndex == 1) {
+      // 30 Days
+      startDate = now.subtract(const Duration(days: 30));
+      previousPeriodStartDate = now.subtract(const Duration(days: 60));
+    } else {
+      // 90 Days
+      startDate = now.subtract(const Duration(days: 90));
+      previousPeriodStartDate = now.subtract(const Duration(days: 180));
+    }
+
+    try {
+      // Query 1: Current Pain Records
+      final painSnapshot = await FirebaseFirestore.instance
+          .collection('pain_records')
+          .where('userId', isEqualTo: _userId)
+          .where('timestamp', isGreaterThanOrEqualTo: startDate)
+          .orderBy('timestamp')
+          .get();
+
+      // Query 2: Previous Pain Records (For comparison)
+      final prevPainSnapshot = await FirebaseFirestore.instance
+          .collection('pain_records')
+          .where('userId', isEqualTo: _userId)
+          .where('timestamp', isGreaterThanOrEqualTo: previousPeriodStartDate)
+          .where('timestamp', isLessThan: startDate)
+          .get();
+
+      // Query 3: Practice Records
+      final practiceSnapshot = await FirebaseFirestore.instance
+          .collection('practice_records')
+          .where('userId', isEqualTo: _userId)
+          .where('timestamp', isGreaterThanOrEqualTo: startDate)
+          .get();
+
+      // Process Data
+      _processPainData(painSnapshot.docs, prevPainSnapshot.docs);
+      _processPracticeData(practiceSnapshot.docs);
+
+    } catch (e) {
+      debugPrint("Error loading reports: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // 3. Process Practice Data
+  void _processPracticeData(List<QueryDocumentSnapshot> docs) {
+    _totalPractices = docs.length;
+    _practiceCounts = {};
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      String title = data['practiceTitle'] ?? 'Outros';
+
+      // Normalize titles for grouping
+      if (title.toLowerCase().contains("medita")) {
+        title = "Meditação";
+      } else if (title.toLowerCase().contains("fito")) {
+        title = "Fitoterapia";
+      } else if (title.toLowerCase().contains("acu")) {
+        title = "Acupressão";
+      } else if (title.toLowerCase().contains("exerc")) {
+        title = "Exercícios";
+      }
+
+      _practiceCounts[title] = (_practiceCounts[title] ?? 0) + 1;
+    }
+  }
+
+  // 4. Process Pain Data
+  void _processPainData(List<QueryDocumentSnapshot> docs, List<QueryDocumentSnapshot> prevDocs) {
+    _totalPainRecords = docs.length;
+    _chartData = [];
+    _chartLabels = [];
+    
+    Map<String, List<double>> dailyPainMap = {};
+    double sumPain = 0;
+
+    // Initialize map keys to ensure all days appear in chart (even empty ones)
+    int daysToIterate = _selectedPeriodIndex == 0 ? 7 : (_selectedPeriodIndex == 1 ? 30 : 90);
+    for (int i = 0; i < daysToIterate; i++) {
+       DateTime d = DateTime.now().subtract(Duration(days: (daysToIterate - 1) - i));
+       String key = DateFormat('dd/MM').format(d);
+       dailyPainMap[key] = [];
+    }
+
+    // Fill with real data
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final int pain = data['painLevel'] ?? 0;
+      final Timestamp? ts = data['timestamp'];
+      
+      if (ts != null) {
+        sumPain += pain;
+        String key = DateFormat('dd/MM').format(ts.toDate());
+        if (dailyPainMap.containsKey(key)) {
+          dailyPainMap[key]!.add(pain.toDouble());
+        }
+      }
+    }
+
+    // Prepare Chart Arrays
+    int dayCount = 0;
+    dailyPainMap.forEach((key, values) {
+      // Calculate daily average
+      double dailyAvg = values.isEmpty ? 0 : values.reduce((a, b) => a + b) / values.length;
+      _chartData.add(dailyAvg);
+
+      // Logic to not overcrowd X-Axis labels
+      if (_selectedPeriodIndex == 0) {
+        _chartLabels.add(key); // Show all for 7 days
+      } else {
+        // Show label every 5 days for longer periods
+        if (dayCount % 5 == 0) _chartLabels.add(key);
+        else _chartLabels.add(""); 
+      }
+      dayCount++;
+    });
+
+    _currentAverage = docs.isEmpty ? 0 : sumPain / docs.length;
+    _daysRecorded = dailyPainMap.values.where((l) => l.isNotEmpty).length;
+
+    // Calculate Previous Average
+    double prevSum = 0;
+    for (var doc in prevDocs) {
+      prevSum += ((doc.data() as Map<String, dynamic>)['painLevel'] ?? 0);
+    }
+    _previousAverage = prevDocs.isEmpty ? 0 : prevSum / prevDocs.length;
+  }
+
+  // --- UI BUILD ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,34 +214,29 @@ class _ReportsPageState extends State<ReportsPage> {
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // seletor de periodo
-            _buildPeriodSelector(),
-            const SizedBox(height: 20),
-
-            // grafico
-            _buildChartCard(),
-            const SizedBox(height: 20),
-
-            // progresso pratica
-            _buildProgressCard(),
-            const SizedBox(height: 20),
-
-            // antes vs dps
-            _buildBeforeAfterCard(),
-            const SizedBox(height: 20),
-
-            //  resumo de praticas
-            _buildSummaryGrid(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator()) 
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildPeriodSelector(),
+                const SizedBox(height: 20),
+                _buildChartCard(),
+                const SizedBox(height: 20),
+                _buildPracticeProgressCard(),
+                const SizedBox(height: 20),
+                _buildBeforeAfterCard(),
+                const SizedBox(height: 20),
+                _buildSummaryGrid(),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
     );
   }
+
+  // --- WIDGETS ---
 
   Widget _buildPeriodSelector() {
     return Column(
@@ -96,7 +269,12 @@ class _ReportsPageState extends State<ReportsPage> {
     final isSelected = _selectedPeriodIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedPeriodIndex = index),
+        onTap: () {
+          setState(() {
+            _selectedPeriodIndex = index;
+          });
+          _fetchFirestoreData(); // Reload data
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
@@ -117,9 +295,8 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildChartCard() {
-    // Dados fictícios para o gráfico (7 dias) ALTERAR PARA OS DO BANCO
-    final dataPoints = [8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 4.0];
-    final labels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+    // Check if chart is empty
+    bool isEmpty = _chartData.isEmpty || _chartData.every((v) => v == 0);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -142,32 +319,42 @@ class _ReportsPageState extends State<ReportsPage> {
           ),
           const SizedBox(height: 20),
           
-          // Área do Gráfico Customizado
-          SizedBox(
-            height: 150,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _SimpleLineChartPainter(
-                data: dataPoints,
-                color: const Color(0xFF2962FF),
-              ),
+          if (isEmpty)
+            const SizedBox(
+              height: 150,
+              child: Center(child: Text("Sem dados de dor neste período.", style: TextStyle(color: Colors.grey))),
+            )
+          else
+            Column(
+              children: [
+                SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: CustomPaint(
+                    painter: _SimpleLineChartPainter(
+                      data: _chartData,
+                      color: const Color(0xFF2962FF),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // X-Axis Labels
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: _chartLabels.map((l) => 
+                    Text(l, style: const TextStyle(color: Colors.grey, fontSize: 10))
+                  ).toList(),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
           
-          // Legendas do eixo X
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: labels.map((l) => Text(l, style: const TextStyle(color: Colors.grey, fontSize: 12))).toList(),
-          ),
           const SizedBox(height: 15),
-          
-          // Legenda Inferior
+          // Legend
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text("Sem dor", style: TextStyle(color: Colors.grey, fontSize: 12)),
-              Text("Dor insuportável", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              Text("Sem dor (0)", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              Text("Insuportável (10)", style: TextStyle(color: Colors.grey, fontSize: 12)),
             ],
           ),
         ],
@@ -175,7 +362,19 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  Widget _buildProgressCard() {
+  Widget _buildPracticeProgressCard() {
+    if (_practiceCounts.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: const Center(child: Text("Nenhuma prática realizada neste período.")),
+      );
+    }
+
+    // Sort practices by count (descending)
+    var sortedKeys = _practiceCounts.keys.toList(growable: false)
+      ..sort((k1, k2) => _practiceCounts[k2]!.compareTo(_practiceCounts[k1]!));
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -188,22 +387,34 @@ class _ReportsPageState extends State<ReportsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Progresso das Práticas",
+                "Práticas Realizadas",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Icon(Icons.pie_chart, color: Colors.teal[400]),
             ],
           ),
           const SizedBox(height: 20),
-          _buildProgressItem("Meditação", "15 sessões", 0.75, Colors.blue),
-          _buildProgressItem("Fitoterapia", "12 doses", 0.60, Colors.green),
-          _buildProgressItem("Acupressão", "8 sessões", 0.40, Colors.purple),
+          
+          // Generate list items dynamically
+          ...sortedKeys.map((key) {
+            int count = _practiceCounts[key]!;
+            double percent = count / (_totalPractices == 0 ? 1 : _totalPractices);
+            
+            // Assign colors based on name
+            Color color = Colors.blue;
+            IconData icon = Icons.circle;
+            if (key == "Meditação") { color = Colors.purple; icon = Icons.self_improvement; }
+            else if (key == "Fitoterapia") { color = Colors.green; icon = Icons.eco; }
+            else if (key == "Acupressão") { color = Colors.orange; icon = Icons.fingerprint; }
+
+            return _buildProgressItem(key, "$count sessões", percent, color, icon);
+          }).toList(),
         ],
       ),
     );
   }
 
-  Widget _buildProgressItem(String title, String subtitle, double percent, MaterialColor color) {
+  Widget _buildProgressItem(String title, String subtitle, double percent, Color color, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -211,15 +422,10 @@ class _ReportsPageState extends State<ReportsPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.shade50,
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              title == "Meditação" ? Icons.spa : 
-              title == "Fitoterapia" ? Icons.eco : Icons.fingerprint,
-              color: color,
-              size: 20,
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -254,6 +460,14 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildBeforeAfterCard() {
+    double improvement = 0;
+    bool improved = false;
+    
+    if (_previousAverage > 0) {
+      improvement = ((_previousAverage - _currentAverage) / _previousAverage) * 100;
+      improved = improvement > 0;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -261,7 +475,7 @@ class _ReportsPageState extends State<ReportsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Antes vs Depois",
+                "Comparativo (Período Anterior)",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Icon(Icons.balance, color: Colors.orange[400]),
@@ -274,15 +488,15 @@ class _ReportsPageState extends State<ReportsPage> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
-                    Text("ANTES DAS PRÁTICAS", style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                    Text("PERÍODO ANTERIOR", style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                     const SizedBox(height: 8),
-                    Text("7.2", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red[700])),
-                    Text("Nível de dor médio", style: TextStyle(fontSize: 11, color: Colors.red[700])),
+                    Text(_previousAverage.toStringAsFixed(1), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                    Text("Média de dor", style: TextStyle(fontSize: 11, color: Colors.grey[700])),
                   ],
                 ),
               ),
@@ -292,15 +506,16 @@ class _ReportsPageState extends State<ReportsPage> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: improved ? Colors.green.shade50 : (_currentAverage == 0 ? Colors.grey.shade50 : Colors.red.shade50),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
-                    Text("DEPOIS DAS PRÁTICAS", style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                    Text("PERÍODO ATUAL", style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                     const SizedBox(height: 8),
-                    Text("4.1", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green[700])),
-                    Text("Nível de dor médio", style: TextStyle(fontSize: 11, color: Colors.green[700])),
+                    Text(_currentAverage.toStringAsFixed(1), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, 
+                        color: improved ? Colors.green[700] : (_currentAverage == 0 ? Colors.grey[700] : Colors.red[700]))),
+                    Text("Média de dor", style: TextStyle(fontSize: 11, color: improved ? Colors.green[700] : Colors.grey[700])),
                   ],
                 ),
               ),
@@ -308,31 +523,32 @@ class _ReportsPageState extends State<ReportsPage> {
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.green.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.shade100),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.arrow_downward, color: Colors.green[700], size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(color: Colors.green[800], fontSize: 13),
-                    children: const [
-                      TextSpan(text: "Melhora de 43% na dor\n", style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: "Parabéns! Suas práticas estão funcionando muito bem!", style: TextStyle(fontSize: 11)),
-                    ],
+        if (_previousAverage > 0)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: improved ? Colors.green.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: improved ? Colors.green.shade100 : Colors.orange.shade100),
+            ),
+            child: Row(
+              children: [
+                Icon(improved ? Icons.arrow_downward : Icons.arrow_upward, color: improved ? Colors.green[700] : Colors.orange[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: improved ? Colors.green[800] : Colors.orange[800], fontSize: 13),
+                      children: [
+                        TextSpan(text: improved ? "Melhora de ${improvement.abs().toStringAsFixed(0)}% na dor\n" : "Aumento da dor.\n", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: improved ? "Continue assim!" : "Considere rever suas práticas.", style: const TextStyle(fontSize: 11)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -342,23 +558,15 @@ class _ReportsPageState extends State<ReportsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Resumo das Práticas",
+          "Resumo em Números",
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 15),
         Row(
           children: [
-            Expanded(child: _buildSummaryItem("18", "Dias praticando", Colors.blue)),
+            Expanded(child: _buildSummaryItem("$_daysRecorded", "Dias c/ Dor", Colors.blue)),
             const SizedBox(width: 12),
-            Expanded(child: _buildSummaryItem("35", "Total de práticas", Colors.green)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildSummaryItem("85%", "Meta atingida", Colors.purple)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildSummaryItem("12", "Dias seguidos", Colors.orange)),
+            Expanded(child: _buildSummaryItem("$_totalPractices", "Total Práticas", Colors.green)),
           ],
         ),
       ],
@@ -389,7 +597,8 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 }
 
-//classe para desenhar o grafico 
+// --- Custom Painter for Chart ---
+
 class _SimpleLineChartPainter extends CustomPainter {
   final List<double> data;
   final Color color;
@@ -398,6 +607,11 @@ class _SimpleLineChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Defines how much space we leave on the left for the numbers
+    const double leftPadding = 25.0; 
+    // The actual width available for the line graph
+    final double chartWidth = size.width - leftPadding;
+
     final paintLine = Paint()
       ..color = color
       ..strokeWidth = 3
@@ -412,41 +626,64 @@ class _SimpleLineChartPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-  //linhas da grade por tras
     final paintGrid = Paint()
       ..color = Colors.grey.withOpacity(0.1)
       ..strokeWidth = 1;
 
-    for (int i = 0; i <= 4; i++) {
-       double y = size.height * (i / 4);
-       canvas.drawLine(Offset(0, y), Offset(size.width, y), paintGrid);
+    // Helper to draw text
+    final textPainter = TextPainter(
+      textDirection: ui.TextDirection.ltr,
+    );
+
+    // Draw Grid Lines & Y-Axis Labels (0, 2, 4, 6, 8, 10)
+    for (int i = 0; i <= 5; i++) {
+       // Values: 0, 2, 4, 6, 8, 10
+       int value = i * 2; 
+       
+       // Calculate Y position
+       double y = size.height - (value / 10 * size.height);
+
+       // 1. Draw Text
+       textPainter.text = TextSpan(
+         text: value.toString(),
+         style: const TextStyle(color: Colors.grey, fontSize: 10),
+       );
+       textPainter.layout();
+       // Position text centered vertically on the line, at X=0
+       textPainter.paint(canvas, Offset(0, y - textPainter.height / 2));
+
+       // 2. Draw Grid Line (Starts after the text padding)
+       canvas.drawLine(Offset(leftPadding, y), Offset(size.width, y), paintGrid);
     }
 
     if (data.isEmpty) return;
 
     final path = Path();
-    final double stepX = size.width / (data.length - 1);
+    final double stepX = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth;
     
-    // 0 fica embaixo (size.height), 10 fica em cima (0).
     double getY(double val) => size.height - (val / 10 * size.height);
 
-    path.moveTo(0, getY(data[0]));
+    // Start drawing the line (Shifted by leftPadding)
+    path.moveTo(leftPadding, getY(data[0]));
 
     for (int i = 1; i < data.length; i++) {
-      path.lineTo(i * stepX, getY(data[i]));
+      path.lineTo(leftPadding + (i * stepX), getY(data[i]));
     }
 
     canvas.drawPath(path, paintLine);
 
-    // Desenha os pontos (bolinhas)
-    for (int i = 0; i < data.length; i++) {
-      final cx = i * stepX;
-      final cy = getY(data[i]);
-      
-      // Borda branca da bolinha
-      canvas.drawCircle(Offset(cx, cy), 6, paintDotBorder);
-      // Centro colorido da bolinha
-      canvas.drawCircle(Offset(cx, cy), 4, paintDot);
+    // Draw dots
+    if (data.length < 15) {
+      for (int i = 0; i < data.length; i++) {
+        // Shift dot X position by leftPadding
+        final cx = leftPadding + (i * stepX);
+        final cy = getY(data[i]);
+        
+        if (data[i] == 0) continue; 
+
+        canvas.drawCircle(Offset(cx, cy), 6, paintDotBorder);
+        canvas.drawCircle(Offset(cx, cy), 4, paintDot);
+      }
     }
   }
 

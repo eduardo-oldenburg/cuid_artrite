@@ -1,5 +1,7 @@
 import 'dart:async'; //utilizado para o timer
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PracticeStep {
   final String title;
@@ -229,6 +231,7 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
   int _remainingSeconds = 0;
   bool _isPaused = false;
   bool _isCompleted = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -301,19 +304,42 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
     }
   }
 
+  Future<void> _savePracticeSession() async {
+    setState(() => _isSaving = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
+
+      if (userId != null) {
+        await FirebaseFirestore.instance.collection('practice_records').add({
+          'userId': userId,
+          'practiceTitle': widget.data.title, // e.g., "Meditação Guiada"
+          'durationTotal': widget.data.durationDetail,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint("Error saving practice: $e");
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
   void _showCompletionDialog() {
+    _savePracticeSession();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Prática Concluída! 🎉"),
-        content: const Text("Parabéns, você completou sua sessão de bem-estar."),
+        content: const Text("Parabéns! Sua sessão foi registrada no seu histórico."),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Fecha dialog
-              Navigator.pop(context); // Fecha a tela de sessão
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Close page
             },
             child: const Text("Concluir"),
           ),
