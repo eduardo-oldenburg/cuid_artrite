@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PainScalePage extends StatefulWidget {
   const PainScalePage({super.key});
@@ -8,11 +10,82 @@ class PainScalePage extends StatefulWidget {
 }
 
 class _PainScalePageState extends State<PainScalePage> {
-  int? _selectedPainLevel; //armazena lvl doe
-  
-  final List<String> _selectedBodyParts = [];   // Lista de partes do corpo selecionadas
+  int? _selectedPainLevel; // Stores pain level
+  final List<String> _selectedBodyParts = []; // Stores selected body parts
+  bool _isLoading = false; // Loading state for the button
 
-  // Cores baseadas na escala da imagem
+  // --- Logic: Save to Firebase ---
+  Future<void> _savePainRecord() async {
+    // 1. Validation
+    if (_selectedPainLevel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Por favor, selecione um nível de dor."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 2. Get User ID from Session
+      final prefs = await SharedPreferences.getInstance();
+      final String? userId = prefs.getString('userId');
+
+      if (userId == null) {
+        // Just in case session is lost
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro: Usuário não identificado.")),
+        );
+        return;
+      }
+
+      // 3. Prepare Data
+      final Map<String, dynamic> painData = {
+        'userId': userId,
+        'painLevel': _selectedPainLevel,
+        'painDescription': _getPainDescription(),
+        'bodyParts': _selectedBodyParts,
+        'timestamp': FieldValue.serverTimestamp(), // Server time is accurate
+        'dateString': DateTime.now().toString(), // Helper for sorting locally if needed
+      };
+
+      // 4. Send to Firestore
+      await FirebaseFirestore.instance.collection('pain_records').add(painData);
+
+      // 5. Success Feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Registro salvo com sucesso!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Optional: Clear form or go back
+        setState(() {
+          _selectedPainLevel = null;
+          _selectedBodyParts.clear();
+        });
+        // Navigator.pop(context); // Uncomment if you want to close page after save
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro ao salvar: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Colors based on scale
   Color _getPainColor(int level) {
     if (level <= 2) return const Color(0xFFC8E6C9); 
     if (level <= 4) return const Color(0xFFFFF9C4); 
@@ -29,7 +102,7 @@ class _PainScalePageState extends State<PainScalePage> {
     return Colors.red.shade900;
   }
 
-  // Descrição da dor baseada no nível
+  // Description based on level
   String _getPainDescription() {
     if (_selectedPainLevel == null) {
       return "Selecione um número para ver a descrição";
@@ -79,7 +152,7 @@ class _PainScalePageState extends State<PainScalePage> {
               ),
               const SizedBox(height: 10),
               
-              // legendas "Sem dor" e "Insuportável"
+              // Legends
               const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -89,7 +162,6 @@ class _PainScalePageState extends State<PainScalePage> {
               ),
               const SizedBox(height: 10),
 
-              // lista Números (0-10)
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -168,7 +240,7 @@ class _PainScalePageState extends State<PainScalePage> {
               
               const SizedBox(height: 20),
 
-              // Boneco Geométrico (Simulação Visual)
+              // Geometric Body
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -177,20 +249,16 @@ class _PainScalePageState extends State<PainScalePage> {
                 ),
                 child: Column(
                   children: [
-                    // Cabeça
                     _buildBodyPart("Cabeça", width: 60, height: 60, shape: BoxShape.circle),
                     const SizedBox(height: 5),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Braço Esquerdo
                         _buildBodyPart("Braço Esq", width: 30, height: 80),
                         const SizedBox(width: 5),
-                        // Tronco
                         _buildBodyPart("Tronco", width: 70, height: 100),
                         const SizedBox(width: 5),
-                        // Braço Direito
                         _buildBodyPart("Braço Dir", width: 30, height: 80),
                       ],
                     ),
@@ -198,7 +266,6 @@ class _PainScalePageState extends State<PainScalePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Perna Esquerda
                         Column(
                           children: [
                              _buildBodyPart("Coxa Esq", width: 30, height: 60),
@@ -206,8 +273,7 @@ class _PainScalePageState extends State<PainScalePage> {
                              _buildBodyPart("Perna Esq", width: 30, height: 60),
                           ],
                         ),
-                        const SizedBox(width: 15), // Espaço entre pernas
-                        // Perna Direita
+                        const SizedBox(width: 15),
                         Column(
                           children: [
                              _buildBodyPart("Coxa Dir", width: 30, height: 60),
@@ -247,7 +313,7 @@ class _PainScalePageState extends State<PainScalePage> {
 
               const SizedBox(height: 30),
 
-              // Botão Salvar
+              // --- Save Button Updated ---
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -258,42 +324,24 @@ class _PainScalePageState extends State<PainScalePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    // Lógica de salvar
-                  },
-                  icon: const Icon(Icons.save, color: Colors.white),
-                  label: const Text(
-                    "Salvar Avaliação",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                  onPressed: _isLoading ? null : _savePainRecord, // Disable if loading
+                  icon: _isLoading 
+                      ? Container() // Hide icon when loading
+                      : const Icon(Icons.save, color: Colors.white),
+                  label: _isLoading
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        )
+                      : const Text(
+                          "Salvar Avaliação",
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
                 ),
               ),
 
               const SizedBox(height: 12),
-
-              // Botão Histórico
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade200,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    // Lógica de histórico
-                  },
-                  icon: const Icon(Icons.history, color: Colors.black87),
-                  label: const Text(
-                    "Ver Histórico",
-                    style: TextStyle(color: Colors.black87, fontSize: 16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -301,7 +349,7 @@ class _PainScalePageState extends State<PainScalePage> {
     );
   }
 
-  // Widget auxiliar para criar as partes do corpo clicáveis
+  // Helper widget to create clickable body parts
   Widget _buildBodyPart(String id, {required double width, required double height, BoxShape shape = BoxShape.rectangle}) {
     final isSelected = _selectedBodyParts.contains(id);
     

@@ -150,45 +150,6 @@ class _SignUpPageState extends State<SignUpPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Progress Bar ---
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              color: AppColors.background,
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text("Etapa 1 de 4", style: TextStyle(color: AppColors.textDark)),
-                      Text("25%", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Stack(
-                    children: [
-                      Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      FractionallySizedBox(
-                        widthFactor: 0.25,
-                        child: Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
