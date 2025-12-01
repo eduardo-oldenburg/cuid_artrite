@@ -108,6 +108,9 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
+          Row(
+            children: [
+              // --- 1. Notifications Button (Your new code) ---
               GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -120,12 +123,32 @@ class HomePage extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.2),
+                    color: AppColors.white.withOpacity(0.2), // Glass effect
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.notifications, color: AppColors.white),
                 ),
               ),
+
+              const SizedBox(width: 12), // Space between buttons
+
+              // --- 2. Logout Button (Matching Style) ---
+              GestureDetector(
+                onTap: () => _logout(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    // Using the same style as notifications for consistency
+                    color: AppColors.white.withOpacity(0.2), 
+                    // If you prefer it red to warn the user, uncomment below:
+                    // color: Colors.red.withOpacity(0.7), 
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.logout, color: AppColors.white),
+                ),
+              ),
+            ],
+          )
             ],
           ),
           
