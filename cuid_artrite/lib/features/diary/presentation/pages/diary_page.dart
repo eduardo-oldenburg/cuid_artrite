@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart'; // Certifique-se que o caminho está certo
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPrefs
+import '../../../../core/theme/app_colors.dart'; 
 
 class DiaryPage extends StatefulWidget {
   const DiaryPage({super.key});
@@ -9,13 +11,14 @@ class DiaryPage extends StatefulWidget {
 }
 
 class _DiaryPageState extends State<DiaryPage> {
-  // Estado inicial
+  // State
   String _selectedMood = "Bem";
   double _energyLevel = 5.0;
   final List<String> _selectedSensations = [];
   final TextEditingController _notesController = TextEditingController();
+  bool _isLoading = false; // Added loading state
 
-  // Dados dos Emojis
+  // Emoji Data
   final List<Map<String, dynamic>> _moods = [
     {"label": "Ótimo", "emoji": "😄", "color": Colors.green},
     {"label": "Bem", "emoji": "🙂", "color": Colors.lightGreen},
@@ -24,7 +27,7 @@ class _DiaryPageState extends State<DiaryPage> {
     {"label": "Mal", "emoji": "😢", "color": Colors.red},
   ];
 
-  // Dados das Sensações
+  // Sensation Data
   final List<Map<String, dynamic>> _sensations = [
     {"label": "Relaxado", "icon": Icons.spa_outlined},
     {"label": "Energizado", "icon": Icons.bolt},
@@ -34,6 +37,12 @@ class _DiaryPageState extends State<DiaryPage> {
     {"label": "Refrescado", "icon": Icons.ac_unit},
   ];
 
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
   void _toggleSensation(String label) {
     setState(() {
       if (_selectedSensations.contains(label)) {
@@ -42,6 +51,62 @@ class _DiaryPageState extends State<DiaryPage> {
         _selectedSensations.add(label);
       }
     });
+  }
+
+  // --- Logic: Save to Firestore ---
+  Future<void> _saveDiaryEntry() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Get User ID
+      final prefs = await SharedPreferences.getInstance();
+      final String? userId = prefs.getString('userId');
+
+      if (userId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Erro: Usuário não identificado.")),
+          );
+        }
+        return;
+      }
+
+      // 2. Prepare Data
+      final Map<String, dynamic> diaryData = {
+        'userId': userId,
+        'mood': _selectedMood,
+        'energyLevel': _energyLevel.toInt(),
+        'sensations': _selectedSensations,
+        'notes': _notesController.text.trim(),
+        'timestamp': FieldValue.serverTimestamp(),
+        'dateString': DateTime.now().toIso8601String(), // Useful for sorting
+      };
+
+      // 3. Send to Firestore (Collection: 'diary_records')
+      await FirebaseFirestore.instance.collection('diary_records').add(diaryData);
+
+      // 4. Success Feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Diário salvo com sucesso!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Close page
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro ao salvar: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -71,7 +136,7 @@ class _DiaryPageState extends State<DiaryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // CABEÇALHO 
+            // HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(bottom: 30, top: 10),
@@ -106,7 +171,7 @@ class _DiaryPageState extends State<DiaryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Estado emocional
+                  // Mood Section
                   const Text(
                     "Estado emocional",
                     style: TextStyle(
@@ -129,7 +194,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
                   const SizedBox(height: 30),
 
-                  // nivel de energia
+                  // Energy Level Section
                   const Text(
                     "Nível de energia",
                     style: TextStyle(
@@ -196,7 +261,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
                   const SizedBox(height: 30),
 
-                  // Sensações fisicas
+                  // Sensations Section
                   const Text(
                     "Sensações físicas",
                     style: TextStyle(
@@ -210,7 +275,6 @@ class _DiaryPageState extends State<DiaryPage> {
                     spacing: 12,
                     runSpacing: 12,
                     children: _sensations.map((sensation) {
-                      // calcula para criar colunas 
                       final width = (MediaQuery.of(context).size.width - 40 - 12) / 2;
                       return _buildSensationCard(
                         width: width,
@@ -223,7 +287,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
                   const SizedBox(height: 30),
 
-                  // Anotações pessoais
+                  // Notes Section
                   const Text(
                     "Anotações pessoais",
                     style: TextStyle(
@@ -262,7 +326,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
                   const SizedBox(height: 30),
 
-                  // botão salvar
+                  // SAVE BUTTON
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -274,21 +338,20 @@ class _DiaryPageState extends State<DiaryPage> {
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        // Ação de Salvar
-                        Navigator.pop(context); 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Diário salvo com sucesso!")),
-                        );
-                      },
-                      child: const Text(
-                        "Salvar no Diário",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      onPressed: _isLoading ? null : _saveDiaryEntry, // Logic attached
+                      child: _isLoading 
+                        ? const SizedBox(
+                            height: 24, width: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            "Salvar no Diário",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -301,7 +364,7 @@ class _DiaryPageState extends State<DiaryPage> {
     );
   }
 
-  // Widget para os botões de Emoji
+  // Helper Widget: Mood Option
   Widget _buildMoodOption({required String label, required String emoji, required bool isSelected}) {
     return GestureDetector(
       onTap: () {
@@ -345,7 +408,7 @@ class _DiaryPageState extends State<DiaryPage> {
     );
   }
 
-  // Widget para os Cards de Sensação 
+  // Helper Widget: Sensation Card
   Widget _buildSensationCard({
     required double width,
     required String label,
